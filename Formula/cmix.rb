@@ -1,5 +1,3 @@
-require "find"
-
 class Cmix < Formula
   desc "World-record-holding compression algorithm"
   homepage "https://github.com/byronknoll/cmix"
@@ -8,34 +6,20 @@ class Cmix < Formula
   license "GPL-3.0-or-later"
 
   def install
-    # 1. LOCATE THE SOURCE FILE
-    # We stop guessing folder names. We scan the extracted files for 'cmix.cpp'.
-    cpp_file = nil
-    Find.find(buildpath) do |path|
-      if File.basename(path) == "cmix.cpp"
-        cpp_file = path
-        break
-      end
-    end
+    # 1. FIX THE COMPILER
+    # The file is named 'makefile' (lowercase).
+    # We replace the hardcoded 'g++' with Homebrew's smart compiler.
+    inreplace "makefile", "g++", ENV.cxx
 
-    # 2. DEBUGGING OUTPUT
-    # If the file is somehow missing, this 'ls -R' will print the exact folder structure
-    # to the error log so we can see what is happening.
-    if cpp_file.nil?
-      puts "--- DIRECTORY DUMP ---"
-      system "ls", "-R"
-      puts "----------------------"
-      odie "CRITICAL: cmix.cpp not found. Check directory dump above."
-    end
+    # 2. FIX LINUX LIBRARIES
+    # On Linux, we need to explicitly link libstdc++
+    inreplace "makefile", "-lpthread", "-lpthread -lstdc++" unless OS.mac?
 
-    # 3. COMPILE
-    # We point the compiler at the absolute path we just found.
-    # We include -lstdc++ for Linux compatibility.
-    libs = OS.mac? ? "-lpthread" : "-lpthread -lstdc++"
-    system ENV.cxx, "-O3", cpp_file, "-o", "cmix", *libs.split
+    # 3. BUILD
+    # This reads the makefile and compiles all the files in 'src/' correctly.
+    system "make"
 
-    # 4. MAN PAGE & INSTALL
-    # We write the man page directly to the install location to avoid path errors.
+    # 4. GENERATE MAN PAGE
     (buildpath/"cmix.1").write <<~EOS
       .TH CMIX 1 "January 2026" "1.9" "Cmix Manual"
       .SH NAME
@@ -50,12 +34,14 @@ class Cmix < Formula
       Byron Knoll. Formula by Aritya Arjunan.
     EOS
 
+    # 5. INSTALL
     bin.install "cmix"
     pkgshare.install "dictionary"
     man1.install "cmix.1"
   end
 
   test do
+    # Run version check. Expect exit code 1.
     output = shell_output("#{bin}/cmix", 1)
     assert_match "cmix", output
   end
