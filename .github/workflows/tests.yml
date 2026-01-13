@@ -14,12 +14,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - ubuntu-22.04
-          - ubuntu-24.04
-          - macos-14
-          - macos-15
-          - macos-latest
+        # These 4 cover every Mac and Linux user on the planet
+        os: [ubuntu-22.04, ubuntu-24.04, macos-14, macos-15]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Set up Homebrew
@@ -34,7 +30,7 @@ jobs:
 
       - name: Run brew test-bot --only-formulae
         run: |
-          # This forces the build of cmix
+          # Build cmix specifically
           brew test-bot --only-formulae --root-url=https://ghcr.io/v2/${{ github.repository_owner }}/cmix cmix
 
       - name: Upload bottles as artifacts
