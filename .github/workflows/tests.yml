@@ -14,8 +14,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # We'll stick to the core modern versions to keep the speed up
-        os: [ubuntu-22.04, ubuntu-24.04, macos-14, macos-15]
+        os:
+          - ubuntu-20.04
+          - ubuntu-22.04
+          - ubuntu-24.04
+          - macos-14
+          - macos-15
+          - macos-latest # This will build for Tahoe 26.2
     runs-on: ${{ matrix.os }}
     steps:
       - name: Set up Homebrew
@@ -30,7 +35,7 @@ jobs:
 
       - name: Run brew test-bot --only-formulae
         run: |
-          # This command builds specifically your formula
+          # This builds cmix specifically and creates the bottles
           brew test-bot --only-formulae --root-url=https://ghcr.io/v2/${{ github.repository_owner }}/cmix cmix
 
       - name: Upload bottles as artifacts

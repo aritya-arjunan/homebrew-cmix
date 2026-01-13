@@ -6,17 +6,15 @@ class Cmix < Formula
   license "GPL-3.0-or-later"
 
   def install
-    # 1. Fix the Makefile so it uses Homebrew's compiler instead of hardcoded g++
-    # This makes it work on Mac (Clang) and Linux (G++) automatically
-    inreplace "Makefile", "g++", ENV.cxx
+    # 1. Prepare the compilation arguments
+    # We add -lstdc++ for Linux and -lpthread for everyone
+    args = ["-O3", "#{buildpath}/cmix.cpp", "-o", "cmix", "-lpthread"]
+    args << "-lstdc++" unless OS.mac?
 
-    # 2. On Linux, we need to add the standard C++ library to the Makefile
-    inreplace "Makefile", "-lpthread", "-lpthread -lstdc++" unless OS.mac?
+    # 2. Compile directly (This bypasses the need for a Makefile)
+    system ENV.cxx, *args
 
-    # 3. Run the official Make command
-    system "make"
-
-    # 4. Create the man page file
+    # 3. Create the man page on the fly
     (buildpath/"cmix.1").write <<~EOS
       .TH CMIX 1 "January 2026" "1.9" "Cmix Manual"
       .SH NAME
@@ -31,15 +29,14 @@ class Cmix < Formula
       Byron Knoll. Formula by Aritya Arjunan.
     EOS
 
-    # 5. Install the files
+    # 4. Install binary, dictionary, and man page
     bin.install "cmix"
     pkgshare.install "dictionary"
     man1.install "cmix.1"
   end
 
   test do
-    # Run version check. We expect exit code 1.
-    # We use 'shell_output' to capture the text for the test.
+    # Run version check. Expect exit code 1.
     output = shell_output("#{bin}/cmix", 1)
     assert_match "cmix", output
   end
