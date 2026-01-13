@@ -1,29 +1,19 @@
 class Cmix < Formula
   desc "World-record-holding compression algorithm"
   homepage "https://github.com/byronknoll/cmix"
-  url "https://github.com/byronknoll/cmix/archive/refs/heads/master.tar.gz"
-  version "1.9"
-  sha256 "0f443b81182276c968923a1a361e27a6d8197779979704e67f7e9f3b6038d728"
+  url "https://github.com/byronknoll/cmix/archive/refs/tags/v21.tar.gz"
+  sha256 "c0ff50f24604121bd7ccb843045c0946db1077cfb9ded10fe4c181883e6dbb42"
+  license "GPL-3.0-or-later"
 
   def install
-    # Compile the binary
     system "make"
-    
-    # Install binary
     bin.install "cmix"
-    
-    # Install dictionary (required for cmix to run)
     pkgshare.install "dictionary"
-    
-    # Install the manual page!
     man1.install "cmix.1"
-    
-    # Install README for documentation
-    doc.install "README.md"
   end
 
   test do
-    # Simple test to make sure it doesn't crash
+    # NOTE: cmix returns exit code 1 for version check, so we use '1' here
     assert_match "cmix", shell_output("#{bin}/cmix --version", 1)
   end
 end
