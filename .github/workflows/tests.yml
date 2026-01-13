@@ -5,6 +5,7 @@ on:
       - main
   pull_request:
 
+# This gives your "Build Farm" permission to create and upload Bottles
 permissions:
   contents: read
   packages: write
@@ -12,15 +13,16 @@ permissions:
 jobs:
   test-bot:
     strategy:
-      fail-fast: false 
+      # If one machine fails, the others keep working!
+      fail-fast: false
       matrix:
         os:
-          - ubuntu-20.04      # Linux (Older LTS)
-          - ubuntu-22.04      # Linux (Standard LTS)
-          - ubuntu-24.04      # Linux (Newest LTS)
-          - macos-14          # Apple Silicon (Sonoma)
-          - macos-15          # Intel/Apple Silicon (Sequoia)
-          - macos-latest      # macOS 26 Tahoe (The future)
+          - ubuntu-20.04
+          - ubuntu-22.04
+          - ubuntu-24.04
+          - macos-14
+          - macos-15
+          - macos-latest
     runs-on: ${{ matrix.os }}
     steps:
       - name: Set up Homebrew
@@ -35,13 +37,13 @@ jobs:
 
       - name: Run brew test-bot --only-formulae
         run: |
-          # Building 'cmix' for every modern architecture
-          # This generates the ARM64 (M1-M5) and x86_64 bottles
+          # This line forces the robot to look at 'cmix' even if it thinks nothing changed
           brew test-bot --only-formulae --root-url=https://ghcr.io/v2/${{ github.repository_owner }}/cmix cmix
 
       - name: Upload bottles as artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
+          # This saves the pre-compiled "Pills" for you to download
           name: bottles_${{ matrix.os }}
           path: '*.bottle.*'
