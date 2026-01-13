@@ -6,15 +6,19 @@ class Cmix < Formula
   license "GPL-3.0-or-later"
 
   def install
-    # 1. Prepare the compilation arguments
-    # We add -lstdc++ for Linux and -lpthread for everyone
-    args = ["-O3", "#{buildpath}/cmix.cpp", "-o", "cmix", "-lpthread"]
-    args << "-lstdc++" unless OS.mac?
+    # 1. Search and Rescue: Find the folder containing cmix.cpp
+    # Sometimes Linuxbrew lands one folder too high.
+    unless File.exist?("cmix.cpp")
+      subdir = Dir["*"].find { |f| File.directory?(f) && File.exist?("#{f}/cmix.cpp") }
+      cd subdir if subdir
+    end
 
-    # 2. Compile directly (This bypasses the need for a Makefile)
-    system ENV.cxx, *args
+    # 2. Compile for the specific Chip/OS
+    # We use -lstdc++ only for Linux.
+    libs = OS.mac? ? "-lpthread" : "-lpthread -lstdc++"
+    system ENV.cxx, "-O3", "cmix.cpp", "-o", "cmix", *libs.split
 
-    # 3. Create the man page on the fly
+    # 3. Create the manual page
     (buildpath/"cmix.1").write <<~EOS
       .TH CMIX 1 "January 2026" "1.9" "Cmix Manual"
       .SH NAME
@@ -29,7 +33,7 @@ class Cmix < Formula
       Byron Knoll. Formula by Aritya Arjunan.
     EOS
 
-    # 4. Install binary, dictionary, and man page
+    # 4. Install everything
     bin.install "cmix"
     pkgshare.install "dictionary"
     man1.install "cmix.1"
