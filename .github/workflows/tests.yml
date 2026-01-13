@@ -15,11 +15,12 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - ubuntu-22.04
-          - ubuntu-24.04
-          - macos-14
-          - macos-15
-          - macos-latest # Tahoe 26
+          - ubuntu-20.04      # Legacy Intel Linux
+          - ubuntu-22.04      # Intel Linux
+          - ubuntu-24.04      # Modern Linux
+          - macos-14          # Apple Silicon
+          - macos-15          # Intel/Apple Silicon (Sequoia)
+          - macos-latest # Tahoe (Latest)
     runs-on: ${{ matrix.os }}
     steps:
       - name: Set up Homebrew
