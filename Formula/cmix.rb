@@ -6,21 +6,17 @@ class Cmix < Formula
   license "GPL-3.0-or-later"
 
   def install
-    # 1. Patch the compiler
-    # This changes 'g++' to the Homebrew compiler (clang++ or g++-12)
-    inreplace "makefile", "g++", ENV.cxx
+    # 1. THE NO-INREPLACE STRATEGY
+    # We pass the variables directly to the 'make' command. 
+    # This overrides whatever is written in the makefile.
+    
+    # We define the libraries: Mac just needs pthread, Linux needs stdc++
+    libs = OS.mac? ? "-lpthread" : "-lpthread -lstdc++"
 
-    # 2. Patch the libraries for Linux (SAFELY)
-    if OS.linux?
-      # This Regex finds the LDFLAGS line and appends -lstdc++ to it.
-      # It won't crash if '-lpthread' is missing or named differently.
-      inreplace "makefile", /LDFLAGS\s*=.*/, "\\0 -lstdc++"
-    end
+    # We run make and tell it exactly which compiler and libraries to use
+    system "make", "CXX=#{ENV.cxx}", "LDFLAGS=#{libs}"
 
-    # 3. Build the project
-    system "make"
-
-    # 4. Generate the Manual Page
+    # 2. CREATE MAN PAGE
     (buildpath/"cmix.1").write <<~EOS
       .TH CMIX 1 "January 2026" "1.9" "Cmix Manual"
       .SH NAME
@@ -35,14 +31,14 @@ class Cmix < Formula
       Byron Knoll. Formula by Aritya Arjunan.
     EOS
 
-    # 5. Install the binary, dictionary, and man page
+    # 3. INSTALL
     bin.install "cmix"
     pkgshare.install "dictionary"
     man1.install "cmix.1"
   end
 
   test do
-    # Verify the binary exists and can run
+    # Simply check if the binary can be found and run
     output = shell_output("#{bin}/cmix", 1)
     assert_match "cmix", output
   end
