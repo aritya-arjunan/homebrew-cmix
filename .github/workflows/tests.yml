@@ -24,33 +24,26 @@ jobs:
           - macos-latest
     runs-on: ${{ matrix.os }}
     steps:
-      # STEP 1: TAKE OWNERSHIP (The real fix for ARM Linux)
       - name: Fix Homebrew ownership for Linux
         if: runner.os == 'Linux'
         run: |
           sudo chown -R $(whoami) /home/linuxbrew/.linuxbrew
-          # Also remove world-write permissions to satisfy Ruby's security check
           chmod -R g-w,o-w /home/linuxbrew/.linuxbrew/Homebrew/Library/Homebrew/vendor/bundle/ruby/3.4.0/gems || true
 
-      # STEP 2: SETUP HOMEBREW
       - name: Set up Homebrew
         id: set-up-homebrew
         uses: Homebrew/actions/setup-homebrew@master
 
-      # STEP 3: CLEANUP
       - name: Run brew test-bot --only-cleanup-before
         run: brew test-bot --only-cleanup-before
 
-      # STEP 4: SETUP TEST-BOT
       - name: Run brew test-bot --only-setup
         run: brew test-bot --only-setup
 
-      # STEP 5: BUILD THE BOTTLES
       - name: Run brew test-bot --only-formulae
         run: |
           brew test-bot --only-formulae --root-url=https://ghcr.io/v2/${{ github.repository_owner }}/cmix cmix
 
-      # STEP 6: UPLOAD THE ARTIFACTS
       - name: Upload bottles as artifacts
         if: always()
         uses: actions/upload-artifact@v4
