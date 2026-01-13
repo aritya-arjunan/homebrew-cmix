@@ -15,12 +15,14 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - ubuntu-20.04
-          - ubuntu-22.04
-          - ubuntu-24.04
-          - macos-14
-          - macos-15
-          - macos-latest # This builds for Tahoe 26.2
+          - ubuntu-20.04      # Intel Linux (Legacy)
+          - ubuntu-22.04      # Intel Linux (Standard)
+          - ubuntu-24.04      # Intel Linux (Modern)
+          - ubuntu-22.04-arm  # ARM Linux (Standard ARM)
+          - ubuntu-24.04-arm  # ARM Linux (Modern ARM)
+          - macos-14          # Apple Silicon (Sonoma)
+          - macos-15          # Intel/Apple Silicon (Sequoia)
+          - macos-latest      # macOS 26 Tahoe
     runs-on: ${{ matrix.os }}
     steps:
       - name: Set up Homebrew
@@ -35,6 +37,7 @@ jobs:
 
       - name: Run brew test-bot --only-formulae
         run: |
+          # This builds the 'Pills' (Bottles) for 8 different architectures!
           brew test-bot --only-formulae --root-url=https://ghcr.io/v2/${{ github.repository_owner }}/cmix cmix
 
       - name: Upload bottles as artifacts
