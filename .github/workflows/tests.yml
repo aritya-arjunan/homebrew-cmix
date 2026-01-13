@@ -15,7 +15,6 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - ubuntu-20.04
           - ubuntu-22.04
           - ubuntu-24.04
           - macos-14
@@ -35,7 +34,7 @@ jobs:
 
       - name: Run brew test-bot --only-formulae
         run: |
-          # This builds cmix specifically and creates the bottles
+          # This forces the build of cmix
           brew test-bot --only-formulae --root-url=https://ghcr.io/v2/${{ github.repository_owner }}/cmix cmix
 
       - name: Upload bottles as artifacts
