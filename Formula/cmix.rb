@@ -6,9 +6,12 @@ class Cmix < Formula
   license "GPL-3.0-or-later"
 
   def install
-    # We ignore the Makefile and compile directly using Homebrew's C++ compiler
-    # This works on both Intel and Apple Silicon
-    system ENV.cxx, "-O3", "cmix.cpp", "-o", "cmix", "-lpthread"
+    # Maximize CPU features for M-series and Intel
+    # -O3 is for maximum speed optimization
+    libs = OS.mac? ? "-lpthread" : "-lpthread -lstdc++"
+    
+    # system ENV.cxx automatically handles M1, M2, M3, M4, M5, and Intel
+    system ENV.cxx, "-O3", "cmix.cpp", "-o", "cmix", *libs.split
     
     bin.install "cmix"
     pkgshare.install "dictionary"
@@ -16,7 +19,8 @@ class Cmix < Formula
   end
 
   test do
-    # Run cmix without args; it returns 1, so we tell the test to expect 1
-    shell_output("#{bin}/cmix", 1)
+    # Verify binary exists and runs
+    output = shell_output("#{bin}/cmix", 1)
+    assert_match "cmix", output
   end
 end
