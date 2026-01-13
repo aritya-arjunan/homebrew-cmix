@@ -17,19 +17,11 @@ jobs:
         os:
           - ubuntu-22.04
           - ubuntu-24.04
-          - ubuntu-22.04-arm
-          - ubuntu-24.04-arm
           - macos-14
           - macos-15
-          - macos-latest
+          - macos-latest # Tahoe 26
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Fix Homebrew ownership for Linux
-        if: runner.os == 'Linux'
-        run: |
-          sudo chown -R $(whoami) /home/linuxbrew/.linuxbrew
-          chmod -R g-w,o-w /home/linuxbrew/.linuxbrew/Homebrew/Library/Homebrew/vendor/bundle/ruby/3.4.0/gems || true
-
       - name: Set up Homebrew
         id: set-up-homebrew
         uses: Homebrew/actions/setup-homebrew@master

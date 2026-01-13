@@ -6,52 +6,16 @@ class Cmix < Formula
   license "GPL-3.0-or-later"
 
   def install
-    # 1. Gather all source files, excluding Intel-only and enwik9
+    # 1. Gather all source files
     sources = Dir.glob("src/**/*.cpp").reject do |f|
-      f.include?("enwik9-preproc") || 
-      (Hardware::CPU.arm? && (f.include?("sse.cpp") || f.include?("fxcmv1.cpp")))
+      f.include?("enwik9-preproc") || f.include?("sse.cpp") || f.include?("fxcmv1.cpp")
     end
 
-    # 2. ARM Stub Creation (The critical fix)
-    if Hardware::CPU.arm?
-      (buildpath/"arm_stubs.cpp").write <<~EOS
-        #include <vector>
-        #include <valarray>
-        #include "src/models/fxcmv1.h" // Header for FXCM and SSE classes
-        #include "src/mixer/sse.h"     // Header for SSE class
-
-        // Define the classes and methods INSIDE their namespaces
-        
-        namespace fxcmv1 {
-          // Define the class structure for Predictor to satisfy unique_ptr
-          class Predictor {}; 
-          
-          // Define the missing methods exactly as they appear in fxcmv1.h
-          const std::valarray<float>& FXCM::Predict() {
-            static std::valarray<float> dummy_result(1);
-            return dummy_result;
-          }
-          void FXCM::Update(int) {}
-          FXCM::~FXCM() {} // Destructor defined here
-        }
-
-        namespace SSE {
-          // Define the SSE structure and methods
-          SSE::SSE() {}
-          SSE::~SSE() {}
-          float SSE::Predict(float f) { return f; }
-          void SSE::Perceive(int) {}
-        }
-      EOS
-      sources << "arm_stubs.cpp"
-    end
-
-    # 3. Libraries and Compilation Flags
+    # 2. Libraries (Linux needs stdc++)
     libs = OS.mac? ? ["-lpthread"] : ["-lpthread", "-lstdc++"]
-    build_flags = ["-std=c++14", "-O3"]
-    build_flags << "-DNO_SSE" if Hardware::CPU.arm?
 
-    system ENV.cxx, *build_flags, *sources, "-o", "cmix", *libs
+    # 3. Compile - We rely on the standard compiler provided by the runner
+    system ENV.cxx, "-std=c++14", "-O3", *sources, "-o", "cmix", *libs
 
     # 4. Man Page
     (buildpath/"cmix.1").write <<~EOS
