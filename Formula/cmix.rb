@@ -7,9 +7,9 @@ class Cmix < Formula
 
   def install
     # 1. THE NO-INREPLACE STRATEGY
-    # We pass the variables directly to the 'make' command. 
+    # We pass the variables directly to the 'make' command.
     # This overrides whatever is written in the makefile.
-    
+
     # We define the libraries: Mac just needs pthread, Linux needs stdc++
     libs = OS.mac? ? "-lpthread" : "-lpthread -lstdc++"
 
