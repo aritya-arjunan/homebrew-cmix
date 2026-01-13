@@ -9,62 +9,62 @@ class Cmix < Formula
     # 1. Gather all source files
     sources = Dir.glob("src/**/*.cpp")
 
-    # 2. Handle the Intel vs ARM split
+    # 2. Handle ARM: Exclude Intel-only code and create the ARM Stubs
     if Hardware::CPU.arm?
-      # Exclude the Intel-only files that use <immintrin.h>
+      # Exclude the Intel-only files
       sources.reject! { |f| f.include?("sse.cpp") || f.include?("fxcmv1.cpp") }
 
-      # Create "Stub" definitions that satisfy the unique_ptr and linker
+      # Create the C++ STUBS to satisfy the compiler/linker
       (buildpath/"arm_stubs.cpp").write <<~EOS
         #include <vector>
-        #include <memory>
+        #include <valarray>
+        #include "src/models/fxcmv1.h" // Include the header so it knows about the classes
 
-        // Define dummy classes in the correct namespaces to satisfy unique_ptr
-        namespace fxcmv1 { class Predictor {}; }
-        namespace SSE_sh { struct SSEi_updstr {}; }
+        namespace fxcmv1 {
+          // Define the missing destructor to satisfy unique_ptr (Error 1)
+          FXCM::~FXCM() {}
+        }
 
-        #include "src/mixer/sse.h"
-        #include "src/models/fxcmv1.h"
+        // Define the function signatures exactly as they are declared in fxcmv1.h
+        // Since we don't have the real implementation, we give it a dummy return value.
+        const std::valarray<float>& FXCM::Predict() {
+          static std::valarray<float> dummy_result(1);
+          return dummy_result;
+        }
 
-        // Stub out the SSE methods
+        void FXCM::Update(int) {}
+
+        // SSE is not used, but we need to define its class structure too.
         SSE::SSE() {}
         SSE::~SSE() {}
         float SSE::Predict(float f) { return f; }
         void SSE::Perceive(int) {}
-
-        // Stub out the FXCM methods
-        // We define the destructor to satisfy the unique_ptr<Predictor>
-        FXCM::FXCM() {}
-        FXCM::~FXCM() {}
-        void FXCM::Predict(int) {}
-        void FXCM::Update(int) {}
       EOS
       sources << "arm_stubs.cpp"
     end
 
-    # 3. Always exclude the conflicting enwik9 tool
+    # 3. Exclude enwik9 (conflicting main)
     sources.reject! { |f| f.include?("enwik9-preproc") }
 
-    # 4. Libraries
+    # 4. Libraries and Compilation Flags
     libs = OS.mac? ? ["-lpthread"] : ["-lpthread", "-lstdc++"]
+    build_flags = ["-std=c++14", "-O3"]
+    build_flags << "-DNO_SSE" if Hardware::CPU.arm?
 
-    # 5. Compile
-    # Added -I. and -DNO_SSE to ensure headers and logic align
-    system ENV.cxx, "-std=c++14", "-O3", "-I.", "-DNO_SSE", *sources, "-o", "cmix", *libs
+    system ENV.cxx, *build_flags, *sources, "-o", "cmix", *libs
 
-    # 6. Man Page
+    # 5. Man Page
     (buildpath/"cmix.1").write <<~EOS
       .TH CMIX 1 "January 2026" "1.9" "Cmix Manual"
       .SH NAME
       cmix \\- World-record-holding compression algorithm
       .SH DESCRIPTION
-      World-record-holding compression algorithm.#{" "}
-      Note: Intel-specific optimizations (SSE/FXCM) are disabled on ARM.
+      Note: Intel-specific optimizations (SSE/FXCM) are disabled on ARM builds.
       .SH AUTHOR
       Byron Knoll. Formula by Aritya Arjunan.
     EOS
 
-    # 7. Install
+    # 6. Install
     bin.install "cmix"
     pkgshare.install "dictionary"
     man1.install "cmix.1"
