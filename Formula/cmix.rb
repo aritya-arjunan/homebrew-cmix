@@ -43,7 +43,7 @@ class Cmix < Formula
       .SH NAME
       cmix \\- World-record-holding compression algorithm
       .SH DESCRIPTION
-      World-record-holding compression algorithm. 
+      World-record-holding compression algorithm.#{" "}
       Note: Intel-specific optimizations (SSE/FXCM) are disabled on ARM.
       .SH AUTHOR
       Byron Knoll. Formula by Aritya Arjunan.
