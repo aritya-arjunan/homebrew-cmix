@@ -15,31 +15,40 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - ubuntu-20.04      # Intel Linux (Legacy)
-          - ubuntu-22.04      # Intel Linux (Standard)
-          - ubuntu-24.04      # Intel Linux (Modern)
-          - ubuntu-22.04-arm  # ARM Linux (Standard ARM)
-          - ubuntu-24.04-arm  # ARM Linux (Modern ARM)
-          - macos-14          # Apple Silicon (Sonoma)
-          - macos-15          # Intel/Apple Silicon (Sequoia)
-          - macos-latest      # macOS 26 Tahoe
+          - ubuntu-22.04
+          - ubuntu-24.04
+          - ubuntu-22.04-arm
+          - ubuntu-24.04-arm
+          - macos-14
+          - macos-15
+          - macos-latest # This will cover Tahoe for now
     runs-on: ${{ matrix.os }}
     steps:
+      # STEP 1: FIX THE SECURITY BUG (Only on Linux)
+      - name: Fix world-writable permissions for Homebrew Linux
+        if: runner.os == 'Linux'
+        run: |
+          sudo chmod -R o-w /home/linuxbrew/.linuxbrew/Homebrew/Library/Homebrew/vendor/bundle || true
+
+      # STEP 2: SETUP HOMEBREW
       - name: Set up Homebrew
         id: set-up-homebrew
         uses: Homebrew/actions/setup-homebrew@master
 
+      # STEP 3: CLEANUP
       - name: Run brew test-bot --only-cleanup-before
         run: brew test-bot --only-cleanup-before
 
+      # STEP 4: SETUP TEST-BOT
       - name: Run brew test-bot --only-setup
         run: brew test-bot --only-setup
 
+      # STEP 5: BUILD THE BOTTLES
       - name: Run brew test-bot --only-formulae
         run: |
-          # This builds the 'Pills' (Bottles) for 8 different architectures!
           brew test-bot --only-formulae --root-url=https://ghcr.io/v2/${{ github.repository_owner }}/cmix cmix
 
+      # STEP 6: UPLOAD THE PILLS
       - name: Upload bottles as artifacts
         if: always()
         uses: actions/upload-artifact@v4
