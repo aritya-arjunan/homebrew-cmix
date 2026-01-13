@@ -6,20 +6,18 @@ class Cmix < Formula
   license "GPL-3.0-or-later"
 
   def install
-    # 1. Gather all source files from the 'src' directory
-    # We use Dir.glob to find every .cpp file in all subfolders
-    sources = Dir.glob("src/**/*.cpp")
+    # 1. Filter out the auxiliary tools that have conflicting 'main' functions
+    sources = Dir.glob("src/**/*.cpp").reject do |f|
+      f.include?("enwik9-preproc")
+    end
 
-    # 2. Determine libraries
-    # Linux needs stdc++ for the neural network math
+    # 2. Libraries
     libs = OS.mac? ? ["-lpthread"] : ["-lpthread", "-lstdc++"]
 
-    # 3. Manual Compile
-    # -std=c++14 is required for cmix's code
-    # -O3 is for maximum compression speed
+    # 3. Compile
     system ENV.cxx, "-std=c++14", "-O3", *sources, "-o", "cmix", *libs
 
-    # 4. Create the Manual Page
+    # 4. Man Page
     (buildpath/"cmix.1").write <<~EOS
       .TH CMIX 1 "January 2026" "1.9" "Cmix Manual"
       .SH NAME
@@ -34,14 +32,13 @@ class Cmix < Formula
       Byron Knoll. Formula by Aritya Arjunan.
     EOS
 
-    # 5. Install everything
+    # 5. Install
     bin.install "cmix"
     pkgshare.install "dictionary"
     man1.install "cmix.1"
   end
 
   test do
-    # Run version check; it returns 1, so we tell the test to expect 1
     output = shell_output("#{bin}/cmix", 1)
     assert_match "cmix", output
   end
