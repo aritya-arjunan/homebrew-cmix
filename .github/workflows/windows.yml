@@ -1,0 +1,43 @@
+name: Build Windows EXE
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Allows you to click a button to run it manually
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 1. Install the "Translator" (MSYS2 / MinGW)
+      # This gives us a Linux-like environment inside Windows
+      - uses: msys2/setup-msys2@v2
+        with:
+          install: git make mingw-w64-x86_64-gcc wget tar
+
+      # 2. Download and Compile
+      - name: Compile CMIX.exe
+        shell: msys2 {0}
+        run: |
+          # Download the source code manually (same as your Formula)
+          wget https://github.com/byronknoll/cmix/archive/refs/tags/v21.tar.gz
+          tar -xf v21.tar.gz
+          cd cmix-21
+
+          # Find the source files (Excluding the conflicting enwik9)
+          # We use Unix commands because MSYS2 provides them!
+          SOURCES=$(find src -name "*.cpp" | grep -v "enwik9")
+
+          # COMPILE!
+          # -static : This is CRITICAL. It puts the libraries INSIDE the .exe
+          #           so it works on any computer without installing DLLs.
+          g++ -O3 -std=c++14 -static $SOURCES -o cmix.exe -lpthread
+
+      # 3. Upload the .exe so you can download it
+      - name: Upload EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: cmix_windows_exe
+          path: cmix-21/cmix.exe
