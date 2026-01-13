@@ -14,8 +14,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # These 4 cover every Mac and Linux user on the planet
-        os: [ubuntu-22.04, ubuntu-24.04, macos-14, macos-15]
+        os:
+          - ubuntu-20.04
+          - ubuntu-22.04
+          - ubuntu-24.04
+          - macos-14
+          - macos-15
+          - macos-latest # This builds for Tahoe 26.2
     runs-on: ${{ matrix.os }}
     steps:
       - name: Set up Homebrew
@@ -30,7 +35,6 @@ jobs:
 
       - name: Run brew test-bot --only-formulae
         run: |
-          # Build cmix specifically
           brew test-bot --only-formulae --root-url=https://ghcr.io/v2/${{ github.repository_owner }}/cmix cmix
 
       - name: Upload bottles as artifacts

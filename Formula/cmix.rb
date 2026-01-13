@@ -6,18 +6,11 @@ class Cmix < Formula
   license "GPL-3.0-or-later"
 
   def install
-    # 1. Filter out the auxiliary tools that have conflicting 'main' functions
     sources = Dir.glob("src/**/*.cpp").reject do |f|
       f.include?("enwik9-preproc")
     end
-
-    # 2. Libraries
     libs = OS.mac? ? ["-lpthread"] : ["-lpthread", "-lstdc++"]
-
-    # 3. Compile
     system ENV.cxx, "-std=c++14", "-O3", *sources, "-o", "cmix", *libs
-
-    # 4. Man Page
     (buildpath/"cmix.1").write <<~EOS
       .TH CMIX 1 "January 2026" "1.9" "Cmix Manual"
       .SH NAME
@@ -31,16 +24,12 @@ class Cmix < Formula
       .SH AUTHOR
       Byron Knoll. Formula by Aritya Arjunan.
     EOS
-
-    # 5. Install
     bin.install "cmix"
     pkgshare.install "dictionary"
     man1.install "cmix.1"
   end
 
   test do
-    # We run the command and ignore the exit code (since it varies)
-    # We just check if the output contains the version info
     output = shell_output("#{bin}/cmix", 255)
     assert_match "cmix version", output
   end
