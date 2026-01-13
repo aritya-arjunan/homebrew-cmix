@@ -1,24 +1,37 @@
 name: brew test-bot
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   pull_request:
+
+# This gives the robot permission to upload the "Pills" (Bottles)
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   test-bot:
     strategy:
+      fail-fast: false
       matrix:
         os: [macos-13, macos-14]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Set up Homebrew
         uses: Homebrew/actions/setup-homebrew@master
+
       - name: Run brew test-bot
         run: |
           brew test-bot --only-cleanup-before
           brew test-bot --only-setup
-          brew test-bot --only-formulae --root-url=https://ghcr.io/v2/aritya-arjunan/cmix
-      - name: Upload bottles
+          # This line is the secret: we tell it exactly WHICH formula to bottle
+          brew test-bot --only-formulae --root-url=https://ghcr.io/v2/${{ github.repository_owner }}/cmix aritya-arjunan/cmix/cmix
+
+      - name: Upload bottles as artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
+          # This name will include the OS so we get both Intel and ARM
           name: bottles_${{ matrix.os }}
           path: '*.bottle.*'
