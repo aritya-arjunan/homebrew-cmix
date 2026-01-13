@@ -14,15 +14,30 @@ class Cmix < Formula
       # Exclude the Intel-only files that use <immintrin.h>
       sources.reject! { |f| f.include?("sse.cpp") || f.include?("fxcmv1.cpp") }
 
-      # Create "Stub" functions so the linker doesn't crash on ARM
+      # Create "Stub" definitions that satisfy the unique_ptr and linker
       (buildpath/"arm_stubs.cpp").write <<~EOS
+        #include <vector>
+        #include <memory>
+
+        // Define dummy classes in the correct namespaces to satisfy unique_ptr
+        namespace fxcmv1 { class Predictor {}; }
+        namespace SSE_sh { struct SSEi_updstr {}; }
+
         #include "src/mixer/sse.h"
         #include "src/models/fxcmv1.h"
+
+        // Stub out the SSE methods
         SSE::SSE() {}
         SSE::~SSE() {}
         float SSE::Predict(float f) { return f; }
         void SSE::Perceive(int) {}
+
+        // Stub out the FXCM methods
+        // We define the destructor to satisfy the unique_ptr<Predictor>
         FXCM::FXCM() {}
+        FXCM::~FXCM() {}
+        void FXCM::Predict(int) {}
+        void FXCM::Update(int) {}
       EOS
       sources << "arm_stubs.cpp"
     end
@@ -34,8 +49,8 @@ class Cmix < Formula
     libs = OS.mac? ? ["-lpthread"] : ["-lpthread", "-lstdc++"]
 
     # 5. Compile
-    # We add -I. so the compiler can find the headers from our stub file
-    system ENV.cxx, "-std=c++14", "-O3", "-I.", *sources, "-o", "cmix", *libs
+    # Added -I. and -DNO_SSE to ensure headers and logic align
+    system ENV.cxx, "-std=c++14", "-O3", "-I.", "-DNO_SSE", *sources, "-o", "cmix", *libs
 
     # 6. Man Page
     (buildpath/"cmix.1").write <<~EOS
