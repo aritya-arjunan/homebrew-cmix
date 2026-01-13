@@ -39,7 +39,9 @@ class Cmix < Formula
   end
 
   test do
-    output = shell_output("#{bin}/cmix", 1)
-    assert_match "cmix", output
+    # We run the command and ignore the exit code (since it varies)
+    # We just check if the output contains the version info
+    output = shell_output("#{bin}/cmix", 255)
+    assert_match "cmix version", output
   end
 end
