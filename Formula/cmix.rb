@@ -9,47 +9,53 @@ class Cmix < Formula
     # 1. Gather all source files
     sources = Dir.glob("src/**/*.cpp")
 
-    # 2. RUTHLESS EXCLUSION
-    # We remove the enwik9 tool (conflicting main)
-    # AND on ARM (Mac M-series / Linux ARM), we remove the Intel-only files
-    sources.reject! do |f|
-      f.include?("enwik9-preproc") || 
-      (Hardware::CPU.arm? && (f.include?("sse.cpp") || f.include?("fxcmv1.cpp")))
+    # 2. Handle the Intel vs ARM split
+    if Hardware::CPU.arm?
+      # Exclude the Intel-only files that use <immintrin.h>
+      sources.reject! { |f| f.include?("sse.cpp") || f.include?("fxcmv1.cpp") }
+
+      # Create "Stub" functions so the linker doesn't crash on ARM
+      (buildpath/"arm_stubs.cpp").write <<~EOS
+        #include "src/mixer/sse.h"
+        #include "src/models/fxcmv1.h"
+        SSE::SSE() {}
+        SSE::~SSE() {}
+        float SSE::Predict(float f) { return f; }
+        void SSE::Perceive(int) {}
+        FXCM::FXCM() {}
+      EOS
+      sources << "arm_stubs.cpp"
     end
 
-    # 3. Libraries
+    # 3. Always exclude the conflicting enwik9 tool
+    sources.reject! { |f| f.include?("enwik9-preproc") }
+
+    # 4. Libraries
     libs = OS.mac? ? ["-lpthread"] : ["-lpthread", "-lstdc++"]
 
-    # 4. Compile
-    # We add -D flags to tell the code to stay in 'portable' mode on ARM
-    build_flags = ["-std=c++14", "-O3"]
-    build_flags << "-DNO_SSE" if Hardware::CPU.arm?
+    # 5. Compile
+    # We add -I. so the compiler can find the headers from our stub file
+    system ENV.cxx, "-std=c++14", "-O3", "-I.", *sources, "-o", "cmix", *libs
 
-    system ENV.cxx, *build_flags, *sources, "-o", "cmix", *libs
-
-    # 5. Create the Man Page
+    # 6. Man Page
     (buildpath/"cmix.1").write <<~EOS
       .TH CMIX 1 "January 2026" "1.9" "Cmix Manual"
       .SH NAME
       cmix \\- World-record-holding compression algorithm
-      .SH SYNOPSIS
-      .B cmix
-      [\\fI-options\\fR] \\fIinput\\fR \\fIoutput\\fR
       .SH DESCRIPTION
-      .B cmix
-      is an ultra-high-pressure compression tool using context mixing.
+      World-record-holding compression algorithm. 
+      Note: Intel-specific optimizations (SSE/FXCM) are disabled on ARM.
       .SH AUTHOR
       Byron Knoll. Formula by Aritya Arjunan.
     EOS
 
-    # 6. Install
+    # 7. Install
     bin.install "cmix"
     pkgshare.install "dictionary"
     man1.install "cmix.1"
   end
 
   test do
-    # Run version check; ignore exit code 255
     output = shell_output("#{bin}/cmix", 255)
     assert_match "cmix version", output
   end
