@@ -12,17 +12,15 @@ permissions:
 jobs:
   test-bot:
     strategy:
-      # CRITICAL: If one machine fails, do NOT stop the others.
       fail-fast: false 
       matrix:
         os:
           - ubuntu-20.04      # Linux (Older LTS)
           - ubuntu-22.04      # Linux (Standard LTS)
           - ubuntu-24.04      # Linux (Newest LTS)
-          - macos-13          # Intel (Ventura) - Note: Might be retired, but we'll try.
-          - macos-14          # Apple Silicon (Sonoma - M1/M2/M3)
+          - macos-14          # Apple Silicon (Sonoma)
           - macos-15          # Intel/Apple Silicon (Sequoia)
-          - macos-latest      # The absolute newest (Tahoe/26 compatible)
+          - macos-latest      # macOS 26 Tahoe (The future)
     runs-on: ${{ matrix.os }}
     steps:
       - name: Set up Homebrew
@@ -37,8 +35,8 @@ jobs:
 
       - name: Run brew test-bot --only-formulae
         run: |
-          # This command builds cmix for the specific OS/Architecture in the matrix
-          # It generates the bottles for Intel (x86_64), ARM (M1-M5), and Linux
+          # Building 'cmix' for every modern architecture
+          # This generates the ARM64 (M1-M5) and x86_64 bottles
           brew test-bot --only-formulae --root-url=https://ghcr.io/v2/${{ github.repository_owner }}/cmix cmix
 
       - name: Upload bottles as artifacts
