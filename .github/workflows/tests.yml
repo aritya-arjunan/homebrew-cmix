@@ -5,7 +5,6 @@ on:
       - main
   pull_request:
 
-# This gives the robot permission to upload the "Pills" (Bottles)
 permissions:
   contents: read
   packages: write
@@ -13,25 +12,45 @@ permissions:
 jobs:
   test-bot:
     strategy:
+      # This ensures that if the Intel build fails, the ARM build keeps going
       fail-fast: false
       matrix:
+        # macos-13 = Intel
+        # macos-14 = Apple Silicon (M1/M2/M3)
         os: [macos-13, macos-14]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Set up Homebrew
+        id: set-up-homebrew
         uses: Homebrew/actions/setup-homebrew@master
 
-      - name: Run brew test-bot
+      - name: Cache Homebrew Bundler RubyGems
+        id: cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.set-up-homebrew.outputs.gems-path }}
+          key: ${{ runner.os }}-rubygems-${{ steps.set-up-homebrew.outputs.gems-hash }}
+          restore-keys: ${{ runner.os }}-rubygems-
+
+      - name: Install Homebrew Bundler RubyGems
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: brew install-bundler-gems
+
+      - name: Run brew test-bot --only-cleanup-before
+        run: brew test-bot --only-cleanup-before
+
+      - name: Run brew test-bot --only-setup
+        run: brew test-bot --only-setup
+
+      - name: Run brew test-bot --only-formulae
         run: |
-          brew test-bot --only-cleanup-before
-          brew test-bot --only-setup
-          # This line is the secret: we tell it exactly WHICH formula to bottle
-          brew test-bot --only-formulae --root-url=https://ghcr.io/v2/${{ github.repository_owner }}/cmix aritya-arjunan/cmix/cmix
+          # This command tells the robot to build 'cmix' and prepare the bottles
+          brew test-bot --only-formulae --root-url=https://ghcr.io/v2/${{ github.repository_owner }}/cmix cmix
 
       - name: Upload bottles as artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          # This name will include the OS so we get both Intel and ARM
+          # This saves the bottle files so you can download them later
           name: bottles_${{ matrix.os }}
           path: '*.bottle.*'
